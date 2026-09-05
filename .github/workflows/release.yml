@@ -49,7 +49,7 @@ jobs:
           sudo apt-get update
           sudo apt-get download suricata
           dpkg-deb -x suricata_*.deb suricata-pkg
-          cp suricata-pkg/usr/bin/suricata ./suricata
+          cp suricata-pkg/usr/bin/suricata ./suricata-bin
 
           echo '### suricata .deb Depends' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
@@ -60,7 +60,8 @@ jobs:
         run: |
           mkdir -p dist
           cp build/mantis-capture.so dist/
-          cp suricata dist/
+
+          mv suricata-bin dist/suricata
 
       - name: Upload assets to the release
         uses: softprops/action-gh-release@v2
