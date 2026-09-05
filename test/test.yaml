@@ -7,7 +7,7 @@
 #
 #   mkdir -p /tmp/mantis-plugin-test
 #   cd mantis/suricata-plugin
-#   make SURICATA_SRC=/path/to/configured/suricata-8.0.5/checkout
+#   make SURICATA_SRC=/path/to/configured/suricata-8.0.6/checkout
 #   gcc -O0 -g -Wall -I. -o test/test_producer test/test_producer.c
 #   test/test_producer /path/to/self-built/suricata test/test.yaml
 #   cat /tmp/mantis-plugin-test/eve.json

@@ -18,7 +18,7 @@ apt-get install -y build-essential autoconf automake libtool pkg-config \
   liblz4-dev libpcre2-dev libyaml-dev zlib1g-dev
 cargo install cbindgen
 
-git clone --branch suricata-8.0.5 https://github.com/OISF/suricata.git
+git clone --branch suricata-8.0.6 https://github.com/OISF/suricata.git
 cd suricata && ./autogen.sh && ./configure
 make -C rust dist/rust-bindings.h   # headers only, not a full build
 

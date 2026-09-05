@@ -20,9 +20,7 @@ typedef struct MantisThreadInitData_ {
 } MantisThreadInitData;
 
 /* `slot` is the TmmId this module should register itself into -- passed
- * through from the recv_mod_id/decode_mod_id that SCPluginsLoad gave us
- * (TMM_RECEIVEPLUGIN / TMM_DECODEPLUGIN), same pattern as Suricata's own
- * examples/plugins/ci-capture example. */
+ * through from the recv_mod_id/decode_mod_id that SCPluginsLoad gave us. */
 void TmModuleReceiveMantisRegister(int slot);
 void TmModuleDecodeMantisRegister(int slot);
 

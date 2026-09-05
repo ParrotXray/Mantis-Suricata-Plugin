@@ -1,12 +1,8 @@
 /*
  * Entry point for the mantis-capture Suricata plugin.
  *
- * Confirmed against a real clone of the OISF/suricata repo at tag
- * suricata-8.0.5 (the exact version the target deployment runs --
- * `suricata -V` reported "8.0.5 RELEASE"). This mirrors
- * examples/plugins/ci-capture/plugin.c from that tag field-for-field;
- * SCPlugin/SCCapturePlugin struct layout read directly from
- * src/suricata-plugin.h in the same tree.
+ * Mirrors examples/plugins/ci-capture/plugin.c from suricata-8.0.6 -- the
+ * version this plugin targets.
  */
 
 #include "suricata-plugin.h"

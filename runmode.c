@@ -2,30 +2,26 @@
  * Runmode glue for the mantis-capture plugin.
  *
  * Two-phase startup, same pattern as Suricata's own
- * examples/plugins/ci-capture/runmode.c (verbatim-read from a suricata-8.0.5
- * checkout, the exact version the target deployment runs):
+ * examples/plugins/ci-capture/runmode.c:
  *
  *   1. SCPluginsLoad() calls plugin->Init() (a static function in
  *      plugin.c) once during startup. That calls MantisRunModeSetArgs()
  *      to parse --capture-plugin-args into the statics below, then
  *      MantisRunModeRegister() to register a "single" runmode via
  *      RunModeRegisterNewRunMode(). No threads exist yet at this point.
- *   2. Later, Suricata's normal runmode dispatch (same code path used for
- *      every other capture method) calls the function just registered --
- *      RunModeSingle() -- which is where TmThreadCreatePacketHandler
- *      actually spawns the receive/decode/flow-worker chains.
+ *   2. Later, Suricata's normal runmode dispatch calls the function just
+ *      registered -- RunModeSingle() -- which is where
+ *      TmThreadCreatePacketHandler actually spawns the receive/decode/
+ *      flow-worker chains.
  *
- * Deviation from the ci-capture example worth flagging: that example's
- * GetDefaultMode() returns "autofp" while it only ever registers a
- * "single" runmode -- looks like a latent inconsistency in the example
- * (relying on Suricata to fall back somehow). We register "single" and
- * return "single" from GetDefaultMode so this plugin's default mode is
- * guaranteed to resolve to something we actually registered.
+ * We register "single" and return "single" from GetDefaultMode (the
+ * ci-capture example returns "autofp" while only registering "single",
+ * which looks like a latent bug there) so the default mode is guaranteed
+ * to resolve to something actually registered.
  *
  * Args format (ours, not a Suricata convention): a comma-separated
  * key=value list, e.g. "ig_fd=12,eg_fd=13" -- the memfd numbers for the
- * ingress/egress rings, inherited by the suricata child process the same
- * way engine.rs already inherits config_fd/suppress_fd into it today.
+ * ingress/egress rings, inherited by the suricata child process.
  */
 
 #include "suricata-common.h"

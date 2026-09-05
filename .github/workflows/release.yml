@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: Release tag to attach the built assets to
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  # Must track the tag documented in README.md's build steps.
+  SURICATA_TAG: suricata-8.0.6
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config \
+            libjansson-dev libpcap-dev libnet1-dev libcap-ng-dev libmagic-dev \
+            liblz4-dev libpcre2-dev libyaml-dev zlib1g-dev
+
+      - name: Install cbindgen
+        run: cargo install cbindgen
+
+      - name: Fetch Suricata headers
+        run: |
+          git clone --depth 1 --branch "$SURICATA_TAG" https://github.com/OISF/suricata.git
+          cd suricata
+          ./autogen.sh
+          ./configure
+          make -C rust dist/rust-bindings.h
+
+      - name: Build mantis-capture.so
+        run: make SURICATA_SRC="$PWD/suricata"
+
+      - name: Download Suricata executable via apt
+        run: |
+          sudo add-apt-repository ppa:oisf/suricata-stable -y
+          sudo apt-get update
+          sudo apt-get download suricata
+          dpkg-deb -x suricata_*.deb suricata-pkg
+          cp suricata-pkg/usr/bin/suricata ./suricata-bin
+
+      - name: Stage release assets
+        run: |
+          mkdir -p dist
+          cp build/mantis-capture.so dist/
+          cp suricata-bin dist/
+
+      - name: Upload assets to the release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          files: dist/*

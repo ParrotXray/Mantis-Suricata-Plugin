@@ -38,9 +38,8 @@
 #include <stdint.h>
 #include <string.h>
 
-/* Arbitrary sentinel written by the producer so the consumer can detect an
- * unmapped / zeroed / mismatched region instead of reading garbage as a
- * valid header. */
+/* Sentinel so the consumer can detect an unmapped/mismatched region
+ * instead of reading garbage as a valid header. */
 #define MANTIS_RING_MAGIC 0x4d414e544953524bULL
 
 typedef struct MantisRingHeader_ {
@@ -62,15 +61,13 @@ static inline uint8_t *MantisRingSlotPtr(MantisRingHeader *hdr, uint32_t index) 
     return base + (uint64_t)(index & (hdr->capacity - 1)) * hdr->slot_size;
 }
 
-/* Consumer side. Returns 1 and fills `out`/`out_len` on success, 0 if the
- * ring is currently empty. `out` must be at least (hdr->slot_size - 4)
- * bytes; the caller (source.c) sizes it from hdr->slot_size once at
- * thread init, after validating the header. */
+/* Returns 1 and fills `out`/`out_len` on success, 0 if empty. `out` must
+ * be at least (hdr->slot_size - 4) bytes. */
 static inline int MantisRingPop(MantisRingHeader *hdr, uint8_t *out, uint32_t *out_len) {
     uint32_t tail = atomic_load_explicit(&hdr->tail, memory_order_relaxed);
     uint32_t head = atomic_load_explicit(&hdr->head, memory_order_acquire);
     if (tail == head) {
-        return 0; /* empty */
+        return 0;
     }
 
     uint8_t *slot = MantisRingSlotPtr(hdr, tail);
@@ -87,13 +84,13 @@ static inline int MantisRingPop(MantisRingHeader *hdr, uint8_t *out, uint32_t *o
     return 1;
 }
 
-/* Producer side. Returns 1 on success, 0 if the ring is full (caller
- * should drop the frame and count it, never block). */
+/* Returns 1 on success, 0 if full -- caller must drop the frame and
+ * count it, never block. */
 static inline int MantisRingPush(MantisRingHeader *hdr, const uint8_t *data, uint32_t len) {
     uint32_t head = atomic_load_explicit(&hdr->head, memory_order_relaxed);
     uint32_t tail = atomic_load_explicit(&hdr->tail, memory_order_acquire);
     if (head - tail >= hdr->capacity) {
-        return 0; /* full */
+        return 0;
     }
 
     uint32_t max_len = hdr->slot_size - (uint32_t)sizeof(uint32_t);
@@ -115,13 +112,13 @@ static inline int MantisRingValidate(const MantisRingHeader *hdr, uint64_t mappe
         return 0;
     }
     if (hdr->capacity == 0 || (hdr->capacity & (hdr->capacity - 1)) != 0) {
-        return 0; /* not a power of two */
+        return 0;
     }
     if (hdr->slot_size <= sizeof(uint32_t)) {
-        return 0; /* no room for payload past the length prefix */
+        return 0;
     }
     if (MantisRingTotalSize(hdr->capacity, hdr->slot_size) != mapped_size) {
-        return 0; /* fd size doesn't match what the header claims */
+        return 0;
     }
     return 1;
 }

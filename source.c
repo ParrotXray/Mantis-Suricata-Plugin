@@ -1,23 +1,16 @@
 /*
  * Receive/decode thread modules for the mantis-capture plugin.
  *
- * Structurally this mirrors Suricata's own
- * examples/plugins/ci-capture/source.c (verbatim-read from a suricata-8.0.5
- * checkout, the exact version the target deployment runs) closely enough
- * that every API call below -- PacketGetFromQueueOrAlloc, PacketCopyData,
- * SCPacketSetSource/SetTime/SetDatalink, SCTIME_FROM_TIMEVAL,
- * TmqhOutputPacketpool, DecodeLinkLayer, the tmm_modules[] field set, the
- * `((TmSlot *)slot)->slot_next` indirection -- is a direct copy of a real,
- * confirmed call site, not a guess. What's ours: the actual ring read
- * (MantisRingPop) in place of their hardcoded DNS_REQUEST, a real
- * ThreadInit/ThreadDeinit that mmaps the inherited memfd, and a real
- * continuous loop instead of their one-shot demo.
+ * Structurally mirrors Suricata's own examples/plugins/ci-capture/source.c:
+ * same ThreadInit/Loop/Deinit shape and tmm_modules[] wiring. What's ours
+ * is the actual ring read (MantisRingPop) in place of their hardcoded
+ * demo frame, ThreadInit/ThreadDeinit mmapping the inherited memfd, and a
+ * real continuous loop instead of a one-shot demo.
  *
  * Data flow this replaces: XSK recv -> Bytes -> crossbeam channel ->
  * mirror thread -> sendto() -> veth -> Suricata af-packet mmap ring.
  * Becomes: XSK recv -> Bytes -> MantisRingHeader (shared memfd) -> this
- * loop -> PacketCopyData -> TmThreadsSlotProcessPkt. One copy either way
- * (Suricata always copies into its own packet pool), but this skips the
+ * loop -> PacketCopyData -> TmThreadsSlotProcessPkt, skipping the
  * veth/netdev/af-packet-ring hop entirely.
  */
 
@@ -39,11 +32,9 @@
 #include "source.h"
 
 /* Names registered once via LiveRegisterDevice() in runmode.c, before any
- * thread exists; looked up per-thread via LiveGetDevice() below. This is
- * what makes Suricata attach an `in_iface` field to EVE alerts at all --
- * with no LiveDevice, output-json.c's `if (p->livedev)` guard just skips
- * it, silently losing ingress/egress attribution (confirmed the hard way:
- * our first end-to-end test had no in_iface in the alert JSON at all). */
+ * thread exists; looked up per-thread via LiveGetDevice() below. Without a
+ * LiveDevice, output-json.c's `if (p->livedev)` guard skips it, silently
+ * losing ingress/egress attribution in EVE alerts. */
 static const char *MantisLiveDevName(MantisDirection direction)
 {
     return direction == MANTIS_DIR_INGRESS ? MANTIS_LIVEDEV_INGRESS : MANTIS_LIVEDEV_EGRESS;
@@ -141,11 +132,9 @@ static void ReceiveMantisThreadExitPrintStats(ThreadVars *tv, void *data)
 }
 
 /* PktAcqLoop: called once by the thread-management framework, expected to
- * loop internally until engine shutdown -- confirmed from the ci-capture
- * example, which checks suricata_ctl_flags & SURICATA_STOP itself rather
- * than relying on a PktAcqBreakLoop callback (it doesn't register one
- * either; tmm_modules[slot].PktAcqBreakLoop is left NULL below, same as
- * upstream). */
+ * loop internally until engine shutdown. Checks suricata_ctl_flags &
+ * SURICATA_STOP directly rather than relying on a PktAcqBreakLoop
+ * callback (PktAcqBreakLoop is left NULL below). */
 static TmEcode ReceiveMantisLoop(ThreadVars *tv, void *data, void *slot)
 {
     MantisThreadVars *mtv = (MantisThreadVars *)data;
@@ -221,7 +210,7 @@ void TmModuleReceiveMantisRegister(int slot)
     tmm_modules[slot].flags = TM_FLAG_RECEIVE_TM;
 }
 
-/* --- decode side: identical shape to Suricata's own ci-capture example --- */
+/* --- decode side --- */
 
 static TmEcode DecodeMantisThreadInit(ThreadVars *tv, const void *initdata, void **data)
 {
