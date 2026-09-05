@@ -51,6 +51,11 @@ jobs:
           dpkg-deb -x suricata_*.deb suricata-pkg
           cp suricata-pkg/usr/bin/suricata ./suricata
 
+          echo '### suricata .deb Depends' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          dpkg-deb -I suricata_*.deb | grep -E '^ (Depends|Pre-Depends|Version):' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Stage release assets
         run: |
           mkdir -p dist
