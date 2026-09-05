@@ -1,0 +1,63 @@
+%YAML 1.1
+---
+# Minimal config for the mantis-capture end-to-end smoke test. All
+# relative paths below (default-rule-path, plugins:) are resolved against
+# Suricata's CWD -- run everything from `mantis/suricata-plugin/` (one
+# level up from this file), not from inside `test/`:
+#
+#   mkdir -p /tmp/mantis-plugin-test
+#   cd mantis/suricata-plugin
+#   make SURICATA_SRC=/path/to/configured/suricata-8.0.5/checkout
+#   gcc -O0 -g -Wall -I. -o test/test_producer test/test_producer.c
+#   test/test_producer /path/to/self-built/suricata test/test.yaml
+#   cat /tmp/mantis-plugin-test/eve.json
+
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+  port-groups:
+    HTTP_PORTS: "80"
+    DNS_PORTS: "53"
+
+default-rule-path: test
+rule-files:
+  - "test.rules"
+
+plugins:
+  - ./build/mantis-capture.so
+
+logging:
+  default-log-level: info
+  outputs:
+    - console:
+        enabled: yes
+    - file:
+        enabled: yes
+        level: debug
+        filename: /tmp/mantis-plugin-test/suricata.log
+
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: /tmp/mantis-plugin-test/eve.json
+      types:
+        - alert:
+            payload: no
+            packet: no
+        - stats:
+            enabled: yes
+  - fast:
+      enabled: yes
+      filename: /tmp/mantis-plugin-test/fast.log
+
+app-layer:
+  protocols:
+    dns:
+      enabled: yes
+
+threading:
+  set-cpu-affinity: no
+
+host-mode: sniffer-only
